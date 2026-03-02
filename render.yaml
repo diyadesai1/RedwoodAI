@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: redwoodai-backend
+    env: node
+    branch: master
+    buildCommand: "npm run build"
+    startCommand: "npm run start"
+    # set any environment variables via the Render dashboard
