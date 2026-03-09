@@ -1,5 +1,12 @@
 import { DocumentModel, PiiFindingModel, RiskAssessmentModel } from "./db";
-import type { Document, InsertDocument, PiiFinding, InsertPiiFinding, RiskAssessment, InsertRiskAssessment } from "@shared/schema";
+import type {
+  Document,
+  InsertDocument,
+  PiiFinding,
+  InsertPiiFinding,
+  RiskAssessment,
+  InsertRiskAssessment,
+} from "./schema";
 
 export interface IStorage {
   getDocuments(): Promise<Document[]>;
