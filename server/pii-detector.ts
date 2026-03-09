@@ -4,6 +4,9 @@ import { pipeline, env, type TokenClassificationPipeline } from "@xenova/transfo
 env.cacheDir = "./.model-cache";
 env.allowLocalModels = false;
 
+// allow disabling the heavy NER model in low-memory environments (e.g. Render free tier)
+const DISABLE_NER = process.env.DISABLE_NER === "true";
+
 export interface PiiMatch {
   type: string;
   originalValue: string;
@@ -35,6 +38,15 @@ export function isModelReady(): boolean {
 
 //user BERT model to perform NER to extract PII
 export async function initNerModel(): Promise<void> {
+  if (DISABLE_NER) {
+    console.log(
+      "[ML Pipeline] NER transformer disabled via DISABLE_NER env – using pattern-only mode",
+    );
+    modelReady = false;
+    nerPipeline = null;
+    return;
+  }
+
   if (nerPipeline || modelLoading) return;
   modelLoading = true;
   try {
