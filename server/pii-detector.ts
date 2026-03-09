@@ -76,8 +76,7 @@ async function runNerInference(text: string): Promise<PiiMatch[]> {
 
     for (const chunk of chunks) {
       const results = await nerPipeline(chunk.text, { ignore_labels: [] });
-      const entities = Array.isArray(results) ? results : [];
-
+      const entities: NerToken[] = Array.isArray(results) ? (results as NerToken[]) : [];
       const merged = mergeTokens(entities);
 
       for (const entity of merged) {
