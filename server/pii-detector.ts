@@ -1,10 +1,7 @@
-//model setup + config
-import { pipeline, env, type TokenClassificationPipeline } from "@xenova/transformers"; 
+//model setup + config — use type-only import so we don't load the package at startup when DISABLE_NER is set
+import type { TokenClassificationPipeline } from "@xenova/transformers";
 
-env.cacheDir = "./.model-cache";
-env.allowLocalModels = false;
-
-// allow disabling the heavy NER model in low-memory environments (e.g. Render free tier)
+// allow disabling the heavy NER model in low-memory environments (e.g. Render free tier 512MB)
 const DISABLE_NER = process.env.DISABLE_NER === "true";
 
 export interface PiiMatch {
@@ -50,6 +47,10 @@ export async function initNerModel(): Promise<void> {
   if (nerPipeline || modelLoading) return;
   modelLoading = true;
   try {
+    const { pipeline, env } = await import("@xenova/transformers");
+    env.cacheDir = "./.model-cache";
+    env.allowLocalModels = false;
+
     console.log("[ML Pipeline] Loading NER transformer model (Xenova/bert-base-NER)...");
     nerPipeline = (await pipeline("token-classification", "Xenova/bert-base-NER", {
       quantized: true,
