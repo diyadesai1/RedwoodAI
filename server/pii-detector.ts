@@ -1,8 +1,9 @@
-//model setup + config — use type-only import so we don't load the package at startup when DISABLE_NER is set
-import type { TokenClassificationPipeline } from "@xenova/transformers";
-
-// allow disabling the heavy NER model in low-memory environments (e.g. Render free tier 512MB)
-const DISABLE_NER = process.env.DISABLE_NER === "true";
+// NER uses @xenova/transformers (heavy); we only load it when ENABLE_NER is set to avoid OOM on 512MB instances.
+// No static import of that package here so it's never loaded in production by default.
+const isProduction = process.env.NODE_ENV === "production";
+const explicitlyEnableNer = process.env.ENABLE_NER === "true";
+// In production, never load the NER model unless ENABLE_NER=true (saves 512MB+ on Render free tier)
+const shouldLoadNer = !isProduction || explicitlyEnableNer;
 
 export interface PiiMatch {
   type: string;
@@ -24,7 +25,8 @@ export interface PipelineMetrics {
   pipelineStages: string[];
 }
 
-let nerPipeline: TokenClassificationPipeline | null = null;
+type NerPipelineFn = (text: string, options?: { ignore_labels?: string[] }) => Promise<unknown>;
+let nerPipeline: NerPipelineFn | null = null;
 let modelLoading = false;
 let modelReady = false;
 
@@ -35,9 +37,9 @@ export function isModelReady(): boolean {
 
 //user BERT model to perform NER to extract PII
 export async function initNerModel(): Promise<void> {
-  if (DISABLE_NER) {
+  if (!shouldLoadNer) {
     console.log(
-      "[ML Pipeline] NER transformer disabled via DISABLE_NER env – using pattern-only mode",
+      "[ML Pipeline] NER transformer disabled in production (set ENABLE_NER=true to enable) – using pattern-only mode",
     );
     modelReady = false;
     nerPipeline = null;
@@ -54,7 +56,7 @@ export async function initNerModel(): Promise<void> {
     console.log("[ML Pipeline] Loading NER transformer model (Xenova/bert-base-NER)...");
     nerPipeline = (await pipeline("token-classification", "Xenova/bert-base-NER", {
       quantized: true,
-    })) as TokenClassificationPipeline;
+    })) as NerPipelineFn;
     modelReady = true;
     console.log("[ML Pipeline] NER model loaded successfully - ready for inference");
   } catch (error) {
