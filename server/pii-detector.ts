@@ -79,29 +79,32 @@ async function runNerInference(text: string): Promise<PiiMatch[]> {
       const entities: NerToken[] = Array.isArray(results) ? (results as NerToken[]) : [];
       const merged = mergeTokens(entities);
 
-      for (const entity of merged) {
-        const entityType = NER_ENTITY_MAP[entity.entity] || NER_ENTITY_MAP[entity.entity_group] || null;
-        if (!entityType) continue;
-        if (entityType === "name" && entity.word.length < 3) continue;
-        if (entityType === "organization") continue;
-        if (entityType === "location") continue;
+       for (const entity of merged) {
+          const entityKey = entity.entity ?? entity.entity_group ?? "";
+          const entityType = NER_ENTITY_MAP[entityKey] ?? null;
+          const word = entity.word ?? "";
 
-        const cleanWord = entity.word.replace(/##/g, "").trim();
-        if (!cleanWord || cleanWord.length < 2) continue;
+          if (!entityType) continue;
+          if (entityType === "name" && word.length < 3) continue;
+          if (entityType === "organization") continue;
+          if (entityType === "location") continue;
 
-        const startIdx = text.indexOf(cleanWord, globalOffset + (entity.start || 0));
-        if (startIdx === -1) continue;
+          const cleanWord = word.replace(/##/g, "").trim();
+          if (!cleanWord || cleanWord.length < 2) continue;
 
-        findings.push({
-          type: entityType,
-          originalValue: cleanWord,
-          redactedValue: `[${entityType.toUpperCase()} REDACTED]`,
-          confidence: entity.score,
-          startIndex: startIdx,
-          endIndex: startIdx + cleanWord.length,
-          detectionMethod: "ner-transformer",
-        });
-      }
+          const startIdx = text.indexOf(cleanWord, globalOffset + (entity.start || 0));
+          if (startIdx === -1) continue;
+
+          findings.push({
+            type: entityType,
+            originalValue: cleanWord,
+            redactedValue: `[${entityType.toUpperCase()} REDACTED]`,
+            confidence: entity.score,
+            startIndex: startIdx,
+            endIndex: startIdx + cleanWord.length,
+            detectionMethod: "ner-transformer",
+          });
+        }
 
       globalOffset += chunk.text.length;
     }
